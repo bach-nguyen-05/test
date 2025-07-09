@@ -101,87 +101,12 @@ class AsyncVLLMClient:
         return await self.predict_batch(msgs, sampling_params)
 
 class human_reasoning_wrapper:
-    def __init__(self, **kwargs):
-        """Enhanced human reasoning wrapper with better interaction"""
-        self.model_path = "human"
-        self.conversation_count = 0
-        self.current_challenge = 0
+    def __init__(self, model_path="human", **model_kwargs):
+        self.model_path = model_path
 
     def predict(self, msgs, sampling_params=None):
         ans = []
-        for i, msg in enumerate(msgs):
-            # Detect if this is a new challenge (contains original question)
-            is_new_challenge = self._is_new_challenge(msg)
-            if is_new_challenge:
-                self.current_challenge += 1
-                self.conversation_count = 1  # Reset round for new challenge
-                print(f"STARTING CHALLENGE {self.current_challenge}/{len(msgs)}")
-            else:
-                self.conversation_count += 1
-            print(f"Round: {self.conversation_count}")
-
-            # Show conversation history with better formatting
-            self._display_conversation_history(msg, is_new_challenge)
-
-            # Get user input
-            user_response = self._get_user_input()
-            results.append(user_response)
-            print(f"Response Received\n")
+        for msg in msgs:
+            response = input("Your reasoning: ")
+            ans.append(response)
         return ans
-
-    def _is_new_challenge(self, msg):
-        """Check if this is a new challenge (contains original question)"""
-        for turn in msg:
-            if turn['role'] == 'user' and 'Select from the following choices:' in turn['content']:
-                return True
-        return False
-
-
-    def _display_conversation_history(self, msg, show_original_question):
-        """Display conversation history, showing the original question only if show_original_question is True."""
-        shown_original_question = False
-        for turn in msg:
-            role = turn['role'].upper()
-            content = turn['content']
-            if role == 'USER' and 'Select from the following choices:' in content:
-                if show_original_question and not shown_original_question:
-                    if len(content) > 300:
-                        content = content[:300] + "\n... [truncated] ..."
-                    print(f"\n{role}: {content}")
-                    shown_original_question = True
-                continue
-            elif role == 'USER' and 'Select from the following choices:' not in content:
-                print(f"\nVISUAL INTERPRETER: {content[:200]}..." if len(content) > 200 else f"\nVISUAL INTERPRETER: {content}")
-            elif role == 'ASSISTANT':
-                print(f"\nYOUR PREVIOUS RESPONSE: {content[:200]}..." if len(content) > 200 else f"\nYOUR PREVIOUS RESPONSE: {content}")
-            elif role == 'SYSTEM':
-                continue
-            else:
-                if len(content) > 300:
-                    content = content[:300] + "\n... [truncated] ..."
-                print(f"\n{role}: {content}")
-                
-    def _get_user_input(self):
-        """Get validated multi-line input"""
-        lines = []
-        empty_count = 0
-        
-        while True:
-            try:
-                line = input()
-                if line == "":
-                    empty_count += 1
-                    if empty_count >= 2 and lines:
-                        break
-                    elif empty_count == 1 and not lines:
-                        print("Please enter some content first.")
-                        continue
-                else:
-                    empty_count = 0
-                    lines.append(line)
-            except KeyboardInterrupt:
-                print("\nExiting...")
-                return "QUIT"
-        
-        response = "\n".join(lines).strip()
-        return response if response else "I need more time to analyze this."

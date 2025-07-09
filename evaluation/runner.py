@@ -71,8 +71,8 @@ if __name__ == "__main__":
     # Configure for human reasoning mode
     if use_human_reasoning:
         # LIMIT THE NUMBER OF SAMPLES FOR HUMAN REASONING
-        txt_batch_size = 1     # Process one at a time
-        vis_batch_size = 1     # Process one at a time        
+        txt_batch_size = 1     
+        vis_batch_size = 1          
     else:
         txt_batch_size = 64
         vis_batch_size = 64
@@ -139,11 +139,10 @@ if __name__ == "__main__":
             txt_sampling_params,
             vsl_sampling_params,
             max_rounds=12,
-            txt_batch_size=txt_batch_size,
+            txt_batch_size=txt_batch_size, # 1 if use_human_reasoning else 64,
             vis_batch_size=vis_batch_size,
             timeout=timeout,
             conv_round_prompt=False,
-            # samples=samples   # Show samples in the results
         )
         all_results.append(results)
 
