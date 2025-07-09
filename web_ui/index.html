@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Reasoning Wrapper</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="main-flex">
+        <!-- Left Panel: Challenge -->
+        <div class="challenge-panel">
+            <div class="challenge-header">
+                <span class="challenge-title">Challenge</span>
+            </div>
+            <div class="challenge-question" id="questionDisplay"></div>
+            <div class="challenge-meta">
+                <label for="challengeSelect">Select Challenge</label>
+                <select id="challengeSelect" disabled>
+                    <option>Challenge 1</option>
+                </select>
+            </div>
+            <div class="challenge-answer">
+                <label for="answerInput">Your Answer</label>
+                <input type="text" id="answerInput" placeholder="Enter your answer..." autocomplete="off" />
+                <button id="submitAnswerButton" disabled>Submit Answer</button>
+            </div>
+        </div>
+        <!-- Right Panel: Chat -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <span class="model-name">VLM Quiz</span>
+                <span class="model-status" id="connectionStatus">Connecting...</span>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <input type="text" id="messageInput" placeholder="Ask me about what I see in the image..." autocomplete="off" />
+                <button id="sendButton" disabled>➤</button>
+            </div>
+            <div class="chat-instructions">Ask about colors, objects, people, locations, actions, etc.</div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

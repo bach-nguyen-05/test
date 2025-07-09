@@ -1,0 +1,1 @@
+Given an image, you need to answer the following question about it. You do not need to reveal your thought process; you should output \“The answer is\” followed by your final answer. Your answer should be as concise as possible.

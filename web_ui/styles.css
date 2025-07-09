@@ -1,0 +1,219 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f6f8fb;
+    color: #333;
+    font-size: 1.15em;
+}
+
+.main-flex {
+    display: flex;
+    height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.challenge-panel {
+    width: 340px;
+    background: #f8fafc;
+    border-right: 1px solid #e0e7ef;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.challenge-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #3b3b5c;
+}
+.challenge-title {
+    letter-spacing: 0.5px;
+}
+.challenge-question {
+    background: #eaf1fb;
+    border-radius: 10px;
+    padding: 18px 16px;
+    font-size: 1.1em;
+    color: #2d3a4a;
+    margin-bottom: 10px;
+}
+.challenge-meta label,
+.challenge-answer label {
+    font-size: 0.98em;
+    color: #6b7280;
+    margin-bottom: 4px;
+    display: block;
+}
+.challenge-meta select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    margin-bottom: 10px;
+    font-size: 1em;
+    background: #fff;
+}
+.challenge-answer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.challenge-answer input[type="text"] {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 1em;
+    background: #fff;
+}
+.challenge-answer button {
+    padding: 10px 0;
+    border-radius: 6px;
+    background: #667eea;
+    color: #fff;
+    border: none;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.challenge-answer button:disabled {
+    background: #cfd8e3;
+    cursor: not-allowed;
+}
+
+.chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 0 0;
+    background: #f6f8fb;
+}
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px 12px 32px;
+    background: #fff;
+    border-bottom: 1px solid #e0e7ef;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+.model-name {
+    color: #3b3b5c;
+}
+.model-status {
+    font-size: 0.98em;
+    color: #4caf50;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 32px 16px 32px;
+    background: #f6f8fb;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    font-size: 1.15em;
+}
+.message {
+    max-width: 70%;
+    padding: 16px 18px;
+    border-radius: 16px;
+    font-size: 1.08em;
+    line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    word-break: break-word;
+}
+.human-message {
+    align-self: flex-end;
+    background: #e0e7ff;
+    color: #2d3a4a;
+    border-bottom-right-radius: 4px;
+}
+.vision-message {
+    align-self: flex-start;
+    background: #f3e8ff;
+    color: #3b3b5c;
+    border-bottom-left-radius: 4px;
+}
+.message-header {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 1em;
+}
+.chat-input-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 32px 18px 32px;
+    background: #fff;
+    border-top: 1px solid #e0e7ef;
+}
+.chat-input-area input[type="text"] {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 1.08em;
+    background: #f8fafc;
+}
+.chat-input-area button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: #667eea;
+    color: #fff;
+    border: none;
+    font-size: 1.2em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.chat-input-area button:disabled {
+    background: #cfd8e3;
+    cursor: not-allowed;
+}
+.chat-instructions {
+    padding: 0 32px 18px 32px;
+    color: #7b8794;
+    font-size: 0.98em;
+}
+.result-summary {
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.05em;
+    margin: 18px auto 0 auto;
+    max-width: 480px;
+    border: 2px solid #4caf50;
+    background: #e8f5e8;
+}
+.result-summary.incorrect {
+    background: #ffeaea;
+    border: 2px solid #f44336;
+}
+.result-summary.correct {
+    background: #e8f5e8;
+    border: 2px solid #4caf50;
+}
+.result-summary h3 {
+    margin-bottom: 8px;
+    font-size: 1.2em;
+}
+.result-summary p {
+    margin: 2px 0;
+    font-size: 1em;
+}
