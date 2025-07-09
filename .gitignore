@@ -5,3 +5,4 @@ verl/examples/grpo_blind/blind500+800_bird/run_qwen2.5-7B_blind500+800_bird.sh
 verl/examples/grpo_blind/blind5k/new_reasoning_scheme.sh
 verl/examples/grpo_blind/run_llama3.1-8B_blind500.sh
 verl/examples/grpo_blind/run_qwen2-7B_blind500.sh
+script.txt

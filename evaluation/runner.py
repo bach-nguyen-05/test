@@ -55,7 +55,7 @@ if __name__ == "__main__":
     test_file = test_sets[test_set]["test_file"]
     img_dir = test_sets[test_set]["img_dir"]
 
-    sample_rate = 11 if self_consistency else 1
+    sample_rate = 11 if self_consistency else 1  # Sample rate is set to 1 because self-consistency=False
     vsl_model_path = "meta-llama/Llama-3.2-11B-Vision-Instruct"
     save_path = f"results/{setting}.json"
     timeout = 0.1
@@ -76,14 +76,6 @@ if __name__ == "__main__":
     else:
         txt_batch_size = 64
         vis_batch_size = 64
-
-    # # Verify image paths exist
-    # for i, sample in enumerate(samples[:5]):
-    #     img_path = sample["path"]
-    #     if not os.path.exists(img_path):
-    #         print(f"Warning: Image {i} not found at {img_path}")
-    #     else:
-    #         print(f"Image {i} found: {img_path}")
 
     txt_msgs = []
     vsl_msgs = []
@@ -115,13 +107,6 @@ if __name__ == "__main__":
 
     # Use human wrapper for text model if enabled
     if use_human_reasoning:
-        # Load the most appropriate prompt for human reasoning
-        with open("shared/prompts/txt_cot_system_prompt.txt", "r") as pf:
-            human_prompt = pf.read().strip()
-        print("\n" + "="*60)
-        print("You will act as the reasoning instead of a LLM.")
-        print("\n" + human_prompt)
-        print("="*60 + "\n")
         txt_model = human_reasoning_wrapper()
     else:
         txt_model = llama31_vllm_wrapper(txt_model_path, **txt_kwargs)
@@ -158,7 +143,7 @@ if __name__ == "__main__":
             vis_batch_size=vis_batch_size,
             timeout=timeout,
             conv_round_prompt=False,
-            samples=samples   # Show samples in the results
+            # samples=samples   # Show samples in the results
         )
         all_results.append(results)
 
