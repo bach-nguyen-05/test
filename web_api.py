@@ -107,6 +107,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     async def run_conversation():
         """Run the original pipeline in background thread"""
         loop = asyncio.get_running_loop()
+
+        ### Same as results = batch_process_conversations(...) in runner.py ###
         return await loop.run_in_executor(
             None,
             # SAME PIPELINE AS RUNNER.PY
@@ -147,7 +149,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 # Send response back to wrapper
                 txt_model.res_q.put(human_response)
                 
-                # Update session tracking
+                # Counting Rounds
                 session["rounds"] += 1
                 session["conversation_history"].append({
                     "role": "human", 
@@ -194,7 +196,7 @@ async def get_available_datasets():
 
 @app.get("/api/dataset/{dataset_name}/samples")
 async def get_dataset_samples(dataset_name: str, limit: int = 10):
-    """Get samples from a specific dataset"""
+    ### Same as runner.py but specific dataset###
     test_sets = {
         "spubench_500": {
             "test_file": "/mnt/shared/shijie/blind-vlm-project/new3_dataset/MM-SpuBench/data/mmspubench/data.json",
@@ -209,7 +211,6 @@ async def get_dataset_samples(dataset_name: str, limit: int = 10):
         with open(test_sets[dataset_name]["test_file"], "r") as f:
             samples = json.load(f)
         
-        # Add full image paths and limit samples
         for sample in samples[:limit]:
             sample["path"] = os.path.join(test_sets[dataset_name]["img_dir"], sample["path"])
         

@@ -97,9 +97,11 @@ class AsyncVLLMClient:
         tasks = [self.predict_msg(m, sampling_params) for m in msgs]
         return await asyncio.gather(*tasks)
 
+    # Original synchronous predict method
     def predict(self, msgs, sampling_params):
         return asyncio.run(self.predict_batch(msgs, sampling_params))
     
+    # Minor change to support web UI
     async def predict_webui(self, msgs, sampling_params):
         return await self.predict_batch(msgs, sampling_params)
 
@@ -117,6 +119,8 @@ class AsyncVLLMClient:
 class human_reasoning_wrapper:
     def __init__(self, websocket=None, **kwargs):
         self.model_path = "human"
+
+        ### Initialize for web API mode ###
         self.websocket = websocket
         if websocket:
             from queue import Queue
@@ -124,7 +128,7 @@ class human_reasoning_wrapper:
             self.res_q = Queue()
 
     def predict(self, msgs, sampling_params=None):
-        """Synchronous version for conv_sampling.py"""
+        ### Web API mode ###
         if self.websocket:
             # WebSocket mode with queue communication
             answers = []
@@ -136,13 +140,12 @@ class human_reasoning_wrapper:
                 response = self.res_q.get()
                 answers.append(response)
             return answers
+
+
+        ### Original synchronous mode ###
         else:
-            # Terminal mode
             ans = []
             for msg in msgs:
-                print("\n=== Human Reasoning Request ===")
-                for turn in msg:
-                    print(f"{turn['role']}: {turn['content']}")
                 response = input("Your reasoning: ")
                 ans.append(response)
             return ans
