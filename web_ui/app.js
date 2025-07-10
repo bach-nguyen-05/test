@@ -155,15 +155,15 @@ class HumanReasoningApp {
     }
 
     submitFinalAnswer() {
-        const answer = document.getElementById('answerInput').value.trim();
-        if (!answer) return;
-        // Send as final answer in the expected format
-        const answerMsg = `The answer is: (${answer})`;
-        this.addMessage('human', answerMsg);
-        if (this.websocket) {
-            this.websocket.send(JSON.stringify({ message: answerMsg }));
-        }
-        document.getElementById('submitAnswerButton').disabled = true;
+    const answer = document.getElementById('answerInput').value.trim();
+    if (!answer) return;
+    
+    // Send answer directly without "The answer is:" formatting
+    this.addMessage('human', answer);
+    if (this.websocket) {
+        this.websocket.send(JSON.stringify({ message: answer }));
+    }
+    document.getElementById('submitAnswerButton').disabled = true;
     }
 
     showResults(data) {

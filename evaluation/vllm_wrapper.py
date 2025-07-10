@@ -97,16 +97,52 @@ class AsyncVLLMClient:
         tasks = [self.predict_msg(m, sampling_params) for m in msgs]
         return await asyncio.gather(*tasks)
 
-    async def predict(self, msgs, sampling_params):
+    def predict(self, msgs, sampling_params):
+        return asyncio.run(self.predict_batch(msgs, sampling_params))
+    
+    async def predict_webui(self, msgs, sampling_params):
         return await self.predict_batch(msgs, sampling_params)
 
+# class human_reasoning_wrapper:
+#     def __init__(self, model_path="human", **model_kwargs):
+#         self.model_path = model_path
+
+#     def predict(self, msgs, sampling_params=None):
+#         ans = []
+#         for msg in msgs:
+#             response = input("Your reasoning: ")
+#             ans.append(response)
+#         return ans
+
 class human_reasoning_wrapper:
-    def __init__(self, model_path="human", **model_kwargs):
-        self.model_path = model_path
+    def __init__(self, websocket=None, **kwargs):
+        self.model_path = "human"
+        self.websocket = websocket
+        if websocket:
+            from queue import Queue
+            self.req_q = Queue()
+            self.res_q = Queue()
 
     def predict(self, msgs, sampling_params=None):
-        ans = []
-        for msg in msgs:
-            response = input("Your reasoning: ")
-            ans.append(response)
-        return ans
+        """Synchronous version for conv_sampling.py"""
+        if self.websocket:
+            # WebSocket mode with queue communication
+            answers = []
+            for msg in msgs:
+                self.req_q.put({
+                    "type": "reasoning_request",
+                    "conversation": msg
+                })
+                response = self.res_q.get()
+                answers.append(response)
+            return answers
+        else:
+            # Terminal mode
+            ans = []
+            for msg in msgs:
+                print("\n=== Human Reasoning Request ===")
+                for turn in msg:
+                    print(f"{turn['role']}: {turn['content']}")
+                response = input("Your reasoning: ")
+                ans.append(response)
+            return ans
