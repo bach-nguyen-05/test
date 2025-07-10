@@ -6,18 +6,21 @@ import json
 import asyncio
 import uuid
 import os
-
-from evaluation.vllm_wrapper import human_reasoning_wrapper, websocket_human_reasoning_wrapper, AsyncVLLMClient
-from shared.conv_sampling import batch_process_conversations
-from shared.utils import initialize_msg
+from queue import Queue, Empty
 import vllm
 
+# Import your existing modules
+from evaluation.vllm_wrapper import human_reasoning_wrapper, AsyncVLLMClient
+from shared.conv_sampling import batch_process_conversations
+from shared.utils import initialize_msg
+
+#########################################
 app = FastAPI(title="Human Reasoning Web UI")
 
 # Enable CORS for web frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,125 +41,154 @@ class ChatMessage(BaseModel):
 # Global storage for active sessions
 active_sessions = {}
 
-# Initialize models (adapt from runner.py)
+########################################
+
+# Global models
+vsl_model = None
+txt_sampling_params = None
+vsl_sampling_params = None
+
 @app.on_event("startup")
 async def startup_event():
-    global vsl_model, txt_model, txt_sampling_params, vsl_sampling_params
-    # Vision model
+    """Initialize models like runner.py"""
+    global vsl_model, txt_sampling_params, vsl_sampling_params
+    
+    # Initialize vision model
     vsl_model_path = "meta-llama/Llama-3.2-11B-Vision-Instruct"
-    vsl_model = AsyncVLLMClient(model_path=vsl_model_path, port=41651)
-    # Human reasoning wrapper over WebSocket (injected per session)
-    # Text sampling params
+    vsl_model = AsyncVLLMClient(
+        model_path=vsl_model_path, 
+        port=41651
+    )
+    
+    # sampling parameters (matching runner.py)
     txt_sampling_params = vllm.SamplingParams(temperature=0.0, max_tokens=512)
-    # Vision sampling params
     vsl_sampling_params = vllm.SamplingParams(temperature=0.0, max_tokens=128)
 
 @app.post("/api/start_session")
 async def start_session(session_data: ChatSession):
     """Start a new human reasoning session"""
     session_id = str(uuid.uuid4())
+    
+    # Initialize messages using your existing function
     txt_msg, vsl_msg = initialize_msg(
-        session_data.question,
-        session_data.image_path,
+        session_data.question, 
+        session_data.image_path, 
         encode_images=True
     )
+    
     active_sessions[session_id] = {
         "txt_msg": txt_msg,
         "vsl_msg": vsl_msg,
+        "question": session_data.question,
+        "image_path": session_data.image_path,
         "ground_truth": session_data.ground_truth,
         "conversation_history": [],
         "rounds": 0,
         "status": "active"
     }
+    
     return {"session_id": session_id, "question": session_data.question}
 
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    """WebSocket endpoint for real-time chat using original pipeline"""
+    """WebSocket endpoint integrated with batch_process_conversations"""
     await websocket.accept()
+    
     if session_id not in active_sessions:
         await websocket.send_json({"error": "Session not found"})
         return
-
+    
     session = active_sessions[session_id]
-
-    # Create a WebSocket–integrated human reasoning wrapper
-    txt_model = websocket_human_reasoning_wrapper(websocket)
-    # Retrieve shared vision model and sampling params
-    global vsl_model, txt_sampling_params, vsl_sampling_params
-
+    
+    # Create WebSocket-enabled human reasoning wrapper
+    txt_model = human_reasoning_wrapper(websocket=websocket)
+    
+    # Background task to run batch_process_conversations
+    async def run_conversation():
+        """Run the original pipeline in background thread"""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            # SAME PIPELINE AS RUNNER.PY
+            batch_process_conversations,
+            [session["txt_msg"]],
+            [session["vsl_msg"]],
+            txt_model,
+            vsl_model,
+            txt_sampling_params,
+            vsl_sampling_params,
+            12,  
+            1,   # txt_batch_size
+            1,   # vis_batch_size
+            0.1, # timeout
+            False # conv_round_prompt
+        )
+    
+    # Start the pipeline
+    conversation_task = asyncio.create_task(run_conversation())
+    
     try:
-        # Loop until user signals final answer or disconnects
         while True:
-            # Receive human reasoning input
-            data = await websocket.receive_json()
-            human_input = data.get("message", "")
-            if human_input.lower() in ["quit", "exit"]:
-                break
-
-            session["rounds"] += 1
-
-            # Append human turn to text message history
-            session["txt_msg"].append({"role": "user", "content": human_input})
-
-            # Invoke the original batch_process_conversations for one round
-            results = batch_process_conversations(
-                [session["txt_msg"]],
-                [session["vsl_msg"]],
-                txt_model,
-                vsl_model,
-                txt_sampling_params,
-                vsl_sampling_params,
-                max_rounds=session["rounds"],
-                txt_batch_size=1,
-                vis_batch_size=1,
-                timeout=0.1,
-                conv_round_prompt=False
-            )
-
-            # Extract the latest vision response
-            vision_resp = results[0][-1]["vision_response"]
-
-            # Send vision response back to frontend
-            await websocket.send_json({
-                "type": "vision_response",
-                "content": vision_resp,
-                "round": session["rounds"]
-            })
-
-            # Update session history
-            session["conversation_history"].extend([
-                {"role": "human", "content": human_input},
-                {"role": "vision", "content": vision_resp}
-            ])
-
-            # Check for final answer pattern
-            if "answer is:" in human_input.lower():
-                import re
-                pattern = r"(?:The|My) answer is:\s*\(([A-D])\)"
-                match = re.search(pattern, human_input, re.IGNORECASE)
-                if match:
-                    final_answer = match.group(1)
-                    is_correct = (final_answer == session["ground_truth"].strip("()"))
-                    await websocket.send_json({
-                        "type": "final_answer",
-                        "answer": final_answer,
-                        "ground_truth": session["ground_truth"],
-                        "correct": is_correct,
-                        "rounds": session["rounds"]
-                    })
+            # Handle outgoing requests from human_reasoning_wrapper
+            try:
+                req = txt_model.req_q.get_nowait()
+                await websocket.send_json(req)
+            except Empty:
+                pass
+            
+            # Handle incoming responses from frontend
+            try:
+                data = await asyncio.wait_for(websocket.receive_json(), timeout=0.1)
+                human_response = data.get("message", "")
+                
+                if human_response.lower() in ['quit', 'exit']:
                     break
-
+                
+                # Send response back to wrapper
+                txt_model.res_q.put(human_response)
+                
+                # Update session tracking
+                session["rounds"] += 1
+                session["conversation_history"].append({
+                    "role": "human", 
+                    "content": human_response,
+                    "round": session["rounds"]
+                })
+                
+                # Check if this is a final answer (no longer needs "The answer is:" format)
+                if any(letter in human_response.upper() for letter in ['A', 'B', 'C', 'D']) and \
+                   len(human_response.strip()) <= 10:  # Simple final answer detection
+                    # Extract answer letter
+                    import re
+                    match = re.search(r'[A-D]', human_response.upper())
+                    if match:
+                        final_answer = match.group(0)
+                        is_correct = final_answer == session["ground_truth"].strip("()")
+                        
+                        await websocket.send_json({
+                            "type": "final_answer",
+                            "answer": final_answer,
+                            "ground_truth": session["ground_truth"],
+                            "correct": is_correct,
+                            "rounds": session["rounds"]
+                        })
+                        break
+                        
+            except asyncio.TimeoutError:
+                continue
+                
     except WebSocketDisconnect:
         session["status"] = "disconnected"
+    finally:
+        conversation_task.cancel()
 
 @app.get("/api/datasets")
 async def get_available_datasets():
     """Return available datasets for selection"""
     return {
         "spubench_500": {
-            "name": "MM-SpuBench (500 samples)",
-            "description": "Spurious correlation benchmark"
+            "name": "SpuBench (500 samples)",
+            "description": "Sample Benchmark"
         }
     }
 
@@ -169,14 +201,21 @@ async def get_dataset_samples(dataset_name: str, limit: int = 10):
             "img_dir": "/mnt/shared/shijie/blind-vlm-project/new3_dataset/MM-SpuBench/data/mmspubench"
         }
     }
+    
     if dataset_name not in test_sets:
         return {"error": "Dataset not found"}
-
-    with open(test_sets[dataset_name]["test_file"], "r") as f:
-        samples = json.load(f)
-    for sample in samples[:limit]:
-        sample["path"] = os.path.join(test_sets[dataset_name]["img_dir"], sample["path"])
-    return {"samples": samples[:limit]}
+    
+    try:
+        with open(test_sets[dataset_name]["test_file"], "r") as f:
+            samples = json.load(f)
+        
+        # Add full image paths and limit samples
+        for sample in samples[:limit]:
+            sample["path"] = os.path.join(test_sets[dataset_name]["img_dir"], sample["path"])
+        
+        return {"samples": samples[:limit]}
+    except Exception as e:
+        return {"error": f"Failed to load dataset: {str(e)}"}
 
 # Serve static files for the frontend
 app.mount("/", StaticFiles(directory="web_ui", html=True), name="static")
